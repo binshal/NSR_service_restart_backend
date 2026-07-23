@@ -7,21 +7,22 @@ const cyberarkRouter = require("./routes/cyberark");
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000")
-  .split(",")
-  .map((o) => o.trim());
+// const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000")
+//   .split(",")
+//   .map((o) => o.trim());
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-  })
-);
+// app.use(
+//   cors({
+//     origin: (origin, callback) => {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         callback(null, true);
+//       } else {
+//         callback(new Error("Not allowed by CORS"));
+//       }
+//     },
+//   })
+// );
+app.use(cors());
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
