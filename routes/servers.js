@@ -104,6 +104,38 @@ router.post("/:serverName/fail", async (req, res) => {
   res.json(toStatusPayload(server));
 });
 
+// POST /api/servers/:serverName/health - simulate a monitoring/health change
+// (independent of server_status/services — mirrors DPA's real distinction)
+router.post("/:serverName/health", async (req, res) => {
+  const { health_status } = req.body;
+  if (!["healthy", "unhealthy", "not_reporting"].includes(health_status)) {
+    return res.status(400).json({ error: "health_status must be healthy, unhealthy, or not_reporting" });
+  }
+  const server = await Server.findOne({ name: req.params.serverName });
+  if (!server) return res.status(404).json({ error: "Server not found" });
+
+  server.health_status = health_status;
+  server.pushEvent("health", `Health status simulated as "${health_status}"`);
+  await server.save();
+  res.json(server);
+});
+
+// PATCH /api/servers/:serverName/storage - set storage utilization
+router.patch("/:serverName/storage", async (req, res) => {
+  const { storage_used_percent } = req.body;
+  const pct = Number(storage_used_percent);
+  if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+    return res.status(400).json({ error: "storage_used_percent must be a number between 0 and 100" });
+  }
+  const server = await Server.findOne({ name: req.params.serverName });
+  if (!server) return res.status(404).json({ error: "Server not found" });
+
+  server.storage_used_percent = pct;
+  server.pushEvent("storage", `Storage utilization set to ${pct}%`);
+  await server.save();
+  res.json(server);
+});
+
 // GET /api/servers/:serverName/nsr-status - current NSR status
 // This is the endpoint the restart_nsr_windows / restart_nsr_aix mock blocks poll
 router.get("/:serverName/nsr-status", async (req, res) => {

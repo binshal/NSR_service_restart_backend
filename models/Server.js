@@ -16,7 +16,7 @@ const EventSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["fail", "restart", "created", "service_added", "service_removed"],
+      enum: ["fail", "restart", "created", "service_added", "service_removed", "health", "storage"],
       required: true,
     },
     message: { type: String, required: true },
@@ -33,6 +33,23 @@ const ServerSchema = new mongoose.Schema(
       type: String,
       enum: ["up", "down"],
       default: "up",
+    },
+    // Independent from server_status/services: mirrors DPA's real distinction
+    // between "backup jobs failing" and "monitoring health" — a server can be
+    // up with all services running and still be flagged unhealthy or
+    // not-reporting, so this needs to be simulatable on its own.
+    health_status: {
+      type: String,
+      enum: ["healthy", "unhealthy", "not_reporting"],
+      default: "healthy",
+    },
+    // Real field (not derived/faked) so the Storage Capacity widgets reflect
+    // something you actually set, and can be pushed toward a threshold on demand.
+    storage_used_percent: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 20,
     },
     services: { type: [ServiceSchema], default: [] },
     events: { type: [EventSchema], default: [] },
