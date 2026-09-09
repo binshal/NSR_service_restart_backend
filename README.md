@@ -45,4 +45,3 @@ npm run dev
    - `MONGODB_URI` — your Atlas connection string
    - `CORS_ORIGIN` — your Vercel frontend URL (e.g. `https://nsr-console.vercel.app`), comma-separate if you need more than one
 5. Deploy. Render gives you a URL like `https://nsr-backend.onrender.com` — that's your `NEXT_PUBLIC_API_URL` for the frontend.
-before major update

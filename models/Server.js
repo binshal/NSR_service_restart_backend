@@ -12,11 +12,34 @@ const ServiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const FailureReportSchema = new mongoose.Schema(
+  {
+    code: { type: String, default: null },
+    category: { type: String, default: null },
+    title: { type: String, default: null },
+    description: { type: String, default: null },
+    restart_required: { type: Boolean, default: false },
+    target_services: { type: [String], default: [] },
+    recommended_action: { type: String, default: null },
+    detected_at: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const EventSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["fail", "restart", "created", "service_added", "service_removed", "health", "storage"],
+      enum: [
+        "fail",
+        "restart",
+        "created",
+        "service_added",
+        "service_removed",
+        "health",
+        "storage",
+        "failure_report",
+      ],
       required: true,
     },
     message: { type: String, required: true },
@@ -29,22 +52,18 @@ const ServerSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
     os_type: { type: String, enum: ["Windows", "AIX"], required: true },
+    // This is the host state. A NetWorker service failure does NOT make the
+    // host down; production remediation is normally service/daemon scoped.
     server_status: {
       type: String,
       enum: ["up", "down"],
       default: "up",
     },
-    // Independent from server_status/services: mirrors DPA's real distinction
-    // between "backup jobs failing" and "monitoring health" — a server can be
-    // up with all services running and still be flagged unhealthy or
-    // not-reporting, so this needs to be simulatable on its own.
     health_status: {
       type: String,
       enum: ["healthy", "unhealthy", "not_reporting"],
       default: "healthy",
     },
-    // Real field (not derived/faked) so the Storage Capacity widgets reflect
-    // something you actually set, and can be pushed toward a threshold on demand.
     storage_used_percent: {
       type: Number,
       min: 0,
@@ -52,12 +71,15 @@ const ServerSchema = new mongoose.Schema(
       default: 20,
     },
     services: { type: [ServiceSchema], default: [] },
+    // The DPA-style failure report is deliberately stored separately from
+    // service status. This lets the agent consume the diagnosed root cause
+    // and the exact NetWorker services that are candidates for restart.
+    active_failure_report: { type: FailureReportSchema, default: null },
     events: { type: [EventSchema], default: [] },
   },
   { timestamps: true }
 );
 
-// Keep only the most recent 25 events per server so documents don't grow unbounded
 ServerSchema.methods.pushEvent = function (type, message) {
   this.events.unshift({ type, message, at: new Date() });
   if (this.events.length > 25) this.events = this.events.slice(0, 25);
